@@ -1,27 +1,26 @@
-/* Pixeloid (local) */
-@font-face {
-  font-family: "Pixeloid";
-  src: url("./assets/fonts/PixeloidSans.ttf") format("truetype");
-  font-weight: normal;
-  font-style: normal;
-  font-display: swap;
-}
-
 * {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
 }
 
-body {
+html, body {
+  height: 100%;
+  overflow: hidden;
   background: #000;
+}
+
+body {
   display: flex;
   justify-content: center;
   align-items: center;
-  height: 100vh;
 }
 
 canvas {
   image-rendering: pixelated;
   image-rendering: crisp-edges;
+  max-width: 100vw;
+  max-height: 100vh;
+  width: auto;
+  height: auto;
 }
