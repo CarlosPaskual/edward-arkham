@@ -53,8 +53,8 @@ export const scenes = {
     ],
   },
 
-  square_blocked: {
-    bg: "village_bg",
+  square_blocked: { 
+    bg: "square_approach_bg", 
     text: [
       "Edward se dirige hacia la plaza.",
       "",
@@ -99,8 +99,8 @@ export const scenes = {
     next: "night_event",
   },
 
-  night_event: {
-    bg: "inn_bg",
+  night_event: { 
+    bg: "inn_room_bg",
     text: [
       "La habitación de la posada cruje con el frío.",
       "",
