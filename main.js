@@ -202,6 +202,26 @@ function getSceneText() {
 // ---------------------------
 // RENDER HELPERS
 // ---------------------------
+
+function wrapText(text, maxWidth) {
+  const words = text.split(" ");
+  const lines = [];
+  let currentLine = "";
+
+  for (const word of words) {
+    const testLine = currentLine ? `${currentLine} ${word}` : word;
+    if (ctx.measureText(testLine).width > maxWidth && currentLine) {
+      lines.push(currentLine);
+      currentLine = word;
+    } else {
+      currentLine = testLine;
+    }
+  }
+  if (currentLine) lines.push(currentLine);
+
+  return lines;
+}
+
 function drawBackground() {
   const key = currentScene.bg;
   if (key && !images[key]) lazyLoadBackground(key);
@@ -254,22 +274,21 @@ function renderScene(t) {
   const margin = 8;
   const BOX_X = 10;
   const BOX_W = INTERNAL_WIDTH - 20;
+  const TEXT_MAX_WIDTH = BOX_W - (TEXT_X - BOX_X) * 2; // margen igual a ambos lados
 
   const BOX_H_NARR = 72;
   const BOX_H_CHOICES = 120;
 
   const usingChoicesBox = waitingForChoice && currentScene.choices;
-  const BOX_H = usingChoicesBox ? BOX_H_CHOICES : BOX_H_NARR;
-  const BOX_Y = INTERNAL_HEIGHT - BOX_H - margin;
-
-  ctx.fillStyle = "rgba(0,0,0,0.78)";
-  ctx.fillRect(BOX_X, BOX_Y, BOX_W, BOX_H);
-
-  const textStartY = BOX_Y + 28;
 
   if (usingChoicesBox) {
-    // ---- Opciones: todas visibles ----
-    const choicesStartY = textStartY;
+    const BOX_H = BOX_H_CHOICES;
+    const BOX_Y = INTERNAL_HEIGHT - BOX_H - margin;
+
+    ctx.fillStyle = "rgba(0,0,0,0.78)";
+    ctx.fillRect(BOX_X, BOX_Y, BOX_W, BOX_H);
+
+    const choicesStartY = BOX_Y + 28;
 
     currentScene.choices.forEach((choice, index) => {
       const ok = !choice.condition || choice.condition(flags, { sanity });
@@ -283,6 +302,40 @@ function renderScene(t) {
     });
     return;
   }
+
+  // ---- Micro-corte: caja vacía unos ms ----
+  if (performance.now() < cutUntil) {
+    const BOX_Y = INTERNAL_HEIGHT - BOX_H_NARR - margin;
+    ctx.fillStyle = "rgba(0,0,0,0.78)";
+    ctx.fillRect(BOX_X, BOX_Y, BOX_W, BOX_H_NARR);
+    return;
+  }
+
+  // ---- Narración en páginas de 2 líneas ----
+  if (currentLineIndex <= 0) return;
+
+  const revealed = currentLineIndex;
+  const pageStart = Math.floor((revealed - 1) / 2) * 2;
+  const linesToShow = (revealed % 2 === 1) ? 1 : 2;
+  const visibleLines = sceneText.slice(pageStart, pageStart + linesToShow);
+
+  // Cada línea del guion puede necesitar más de una línea física si es
+  // demasiado larga para el ancho de la caja — la envolvemos antes de
+  // calcular cuánto tiene que medir la caja.
+  const wrappedLines = visibleLines.flatMap((line) => wrapText(line, TEXT_MAX_WIDTH));
+
+  const BOX_H = Math.max(BOX_H_NARR, 28 + wrappedLines.length * LINE_HEIGHT + 10);
+  const BOX_Y = INTERNAL_HEIGHT - BOX_H - margin;
+
+  ctx.fillStyle = "rgba(0,0,0,0.78)";
+  ctx.fillRect(BOX_X, BOX_Y, BOX_W, BOX_H);
+
+  const textStartY = BOX_Y + 28;
+
+  wrappedLines.forEach((line, i) => {
+    drawTextOutlined(line, TEXT_X, textStartY + i * LINE_HEIGHT);
+  });
+}
 
   // ---- Micro-corte: caja vacía unos ms ----
   if (performance.now() < cutUntil) {
