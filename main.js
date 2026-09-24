@@ -40,7 +40,7 @@ let gameEnded = false;
 // Scene runtime
 let currentSceneKey = "title";
 let currentScene = scenes[currentSceneKey];
-let currentLineIndex = 0; // cuántas líneas se han revelado en la escena
+let currentLineIndex = 0;
 let waitingForChoice = false;
 
 // ---------------------------
@@ -51,9 +51,8 @@ const FONT_SIZE = 16;
 const LINE_HEIGHT = 18;
 const FONT_UI = `${FONT_SIZE}px "Pixeloid", monospace`;
 
-// Micro-corte entre “páginas” (ms)
 const PAGE_CUT_MS = 120;
-let cutUntil = 0; // timestamp (performance.now) hasta el que se muestra la caja vacía
+let cutUntil = 0;
 
 // ---------------------------
 // ASSETS
@@ -65,26 +64,21 @@ const imageManifest = {
   station_bg: "./assets/gfx/backgrounds/station_bg.png",
   village_bg: "./assets/gfx/backgrounds/village_bg.png",
   inn_bg: "./assets/gfx/backgrounds/inn_bg.png",
-
   plaza_bg: "./assets/gfx/backgrounds/plaza_bg.png",
   archive_bg: "./assets/gfx/backgrounds/archive_bg.png",
-
   cathedral_path_bg: "./assets/gfx/backgrounds/cathedral_path_bg.png",
   cathedral_nave_bg: "./assets/gfx/backgrounds/cathedral_nave_bg.png",
   cathedral_altar_bg: "./assets/gfx/backgrounds/cathedral_altar_bg.png",
   cathedral_side_bg: "./assets/gfx/backgrounds/cathedral_side_bg.png",
-
   catacombs_entry_bg: "./assets/gfx/backgrounds/catacombs_entry_bg.png",
   catacombs_fork_bg: "./assets/gfx/backgrounds/catacombs_fork_bg.png",
   deep_chamber_bg: "./assets/gfx/backgrounds/deep_chamber_bg.png",
   ritual_chamber_bg: "./assets/gfx/backgrounds/ritual_chamber_bg.png",
-
   ending_water_bg: "./assets/gfx/backgrounds/ending_water_bg.png",
   ending_witness_bg: "./assets/gfx/backgrounds/ending_witness_bg.png",
   final_bg: "./assets/gfx/backgrounds/final_bg.png",
 };
 
-// Lazy-load por si añades fondos y te olvidas del manifest
 const lazyStatus = new Map();
 function lazyLoadBackground(key) {
   if (!key) return;
@@ -113,13 +107,11 @@ function lazyLoadBackground(key) {
 window.addEventListener("keydown", (e) => {
   if (gameEnded) return;
 
-  // TITLE: Enter para empezar
   if (currentScene.type === "title" && e.key === "Enter") {
     loadScene(resolveNext(currentScene.next));
     return;
   }
 
-  // Choices: números 1..9
   if (waitingForChoice && e.key >= "1" && e.key <= "9") {
     const index = parseInt(e.key, 10) - 1;
     const choice = currentScene.choices?.[index];
@@ -132,16 +124,12 @@ window.addEventListener("keydown", (e) => {
     return;
   }
 
-  // Avance con Enter
   if (e.key === "Enter" && !waitingForChoice) {
     const sceneText = getSceneText();
 
     if (currentLineIndex < sceneText.length) {
-      // revelamos una línea más
       const nextIndex = currentLineIndex + 1;
 
-      // Micro-corte cuando empezamos una nueva “página” (líneas 3,5,7...)
-      // (o sea: cuando nextIndex es impar y > 1)
       if (nextIndex > 1 && nextIndex % 2 === 1) {
         cutUntil = performance.now() + PAGE_CUT_MS;
       }
@@ -150,7 +138,6 @@ window.addEventListener("keydown", (e) => {
       return;
     }
 
-    // Fin del texto: choices o next o fin
     if (currentScene.choices) {
       waitingForChoice = true;
       return;
@@ -165,7 +152,6 @@ window.addEventListener("keydown", (e) => {
   }
 });
 
-// next puede ser string o función
 function resolveNext(next) {
   if (typeof next === "function") return next(flags, { sanity });
   return next;
@@ -180,8 +166,6 @@ function loadScene(sceneKey) {
   currentLineIndex = 0;
   waitingForChoice = false;
   gameEnded = false;
-
-  // al cambiar de escena, cancelamos cualquier corte visual pendiente
   cutUntil = 0;
 
   if (currentScene?.onEnter) {
@@ -202,7 +186,6 @@ function getSceneText() {
 // ---------------------------
 // RENDER HELPERS
 // ---------------------------
-
 function wrapText(text, maxWidth) {
   const words = text.split(" ");
   const lines = [];
@@ -236,7 +219,6 @@ function drawBackground() {
   ctx.fillRect(0, 0, INTERNAL_WIDTH, INTERNAL_HEIGHT);
 }
 
-// Texto con borde (legibilidad)
 function drawTextOutlined(text, x, y) {
   ctx.fillStyle = "rgba(0,0,0,0.85)";
   ctx.fillText(text, x - 1, y);
@@ -264,7 +246,6 @@ function renderTitle(t) {
   }
 }
 
-// Caja pequeña narrativa (2 líneas) + caja alta para opciones
 function renderScene(t) {
   const sceneText = getSceneText();
   drawBackground();
@@ -274,7 +255,7 @@ function renderScene(t) {
   const margin = 8;
   const BOX_X = 10;
   const BOX_W = INTERNAL_WIDTH - 20;
-  const TEXT_MAX_WIDTH = BOX_W - (TEXT_X - BOX_X) * 2; // margen igual a ambos lados
+  const TEXT_MAX_WIDTH = BOX_W - (TEXT_X - BOX_X) * 2;
 
   const BOX_H_NARR = 72;
   const BOX_H_CHOICES = 120;
@@ -303,8 +284,34 @@ function renderScene(t) {
     return;
   }
 
-  
+  if (performance.now() < cutUntil) {
+    const BOX_Y = INTERNAL_HEIGHT - BOX_H_NARR - margin;
+    ctx.fillStyle = "rgba(0,0,0,0.78)";
+    ctx.fillRect(BOX_X, BOX_Y, BOX_W, BOX_H_NARR);
+    return;
+  }
 
+  if (currentLineIndex <= 0) return;
+
+  const revealed = currentLineIndex;
+  const pageStart = Math.floor((revealed - 1) / 2) * 2;
+  const linesToShow = (revealed % 2 === 1) ? 1 : 2;
+  const visibleLines = sceneText.slice(pageStart, pageStart + linesToShow);
+
+  const wrappedLines = visibleLines.flatMap((line) => wrapText(line, TEXT_MAX_WIDTH));
+
+  const BOX_H = Math.max(BOX_H_NARR, 28 + wrappedLines.length * LINE_HEIGHT + 10);
+  const BOX_Y = INTERNAL_HEIGHT - BOX_H - margin;
+
+  ctx.fillStyle = "rgba(0,0,0,0.78)";
+  ctx.fillRect(BOX_X, BOX_Y, BOX_W, BOX_H);
+
+  const textStartY = BOX_Y + 28;
+
+  wrappedLines.forEach((line, i) => {
+    drawTextOutlined(line, TEXT_X, textStartY + i * LINE_HEIGHT);
+  });
+}
 
 // ---------------------------
 // LOOP
@@ -322,7 +329,6 @@ function loop(t) {
 (async function boot() {
   images = await loadImages(imageManifest);
 
-  // Espera a Pixeloid (local) sin bloquear si falla
   try {
     await document.fonts.load(FONT_UI);
     await document.fonts.ready;
