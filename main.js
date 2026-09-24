@@ -303,62 +303,7 @@ function renderScene(t) {
     return;
   }
 
-  // ---- Micro-corte: caja vacía unos ms ----
-  if (performance.now() < cutUntil) {
-    const BOX_Y = INTERNAL_HEIGHT - BOX_H_NARR - margin;
-    ctx.fillStyle = "rgba(0,0,0,0.78)";
-    ctx.fillRect(BOX_X, BOX_Y, BOX_W, BOX_H_NARR);
-    return;
-  }
-
-  // ---- Narración en páginas de 2 líneas ----
-  if (currentLineIndex <= 0) return;
-
-  const revealed = currentLineIndex;
-  const pageStart = Math.floor((revealed - 1) / 2) * 2;
-  const linesToShow = (revealed % 2 === 1) ? 1 : 2;
-  const visibleLines = sceneText.slice(pageStart, pageStart + linesToShow);
-
-  // Cada línea del guion puede necesitar más de una línea física si es
-  // demasiado larga para el ancho de la caja — la envolvemos antes de
-  // calcular cuánto tiene que medir la caja.
-  const wrappedLines = visibleLines.flatMap((line) => wrapText(line, TEXT_MAX_WIDTH));
-
-  const BOX_H = Math.max(BOX_H_NARR, 28 + wrappedLines.length * LINE_HEIGHT + 10);
-  const BOX_Y = INTERNAL_HEIGHT - BOX_H - margin;
-
-  ctx.fillStyle = "rgba(0,0,0,0.78)";
-  ctx.fillRect(BOX_X, BOX_Y, BOX_W, BOX_H);
-
-  const textStartY = BOX_Y + 28;
-
-  wrappedLines.forEach((line, i) => {
-    drawTextOutlined(line, TEXT_X, textStartY + i * LINE_HEIGHT);
-  });
-}
-
-  // ---- Micro-corte: caja vacía unos ms ----
-  if (performance.now() < cutUntil) {
-    return;
-  }
-
-  // ---- Narración en páginas de 2 líneas ----
-  if (currentLineIndex <= 0) return;
-
-  const revealed = currentLineIndex;
-
-  // página (0,1) (2,3) (4,5)...
-  const pageStart = Math.floor((revealed - 1) / 2) * 2;
-
-  // impar -> 1 línea, par -> 2 líneas
-  const linesToShow = (revealed % 2 === 1) ? 1 : 2;
-
-  const visibleLines = sceneText.slice(pageStart, pageStart + linesToShow);
-
-  visibleLines.forEach((line, i) => {
-    drawTextOutlined(line, TEXT_X, textStartY + i * LINE_HEIGHT);
-  });
-}
+  
 
 
 // ---------------------------
